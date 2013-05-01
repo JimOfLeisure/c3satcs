@@ -16,13 +16,9 @@ class KickItOff {
 		// FIX: Hard-coding the save file name to my test save in the current folder
 		string SaveFilePath = "unc-test.sav";
 
-		// Open the binary file.
-		// Does the 'using' statement do anything for me here? Seems to crash if the file doesn't exist.
-		using (BinaryReader SaveStream = new BinaryReader(File.Open(SaveFilePath,FileMode.Open))) {
-			Console.WriteLine("Inside the using file statement");
-			byte[] SaveFileByteArray = SaveStream.ReadAllBytes();
-			System.Text.ASCIIEncoding ascii = new ASCIIEncoding();
-			Console.WriteLine(ascii.GetString(SaveFileByteArray, 0, 4));
-		}
+		// Read the file into a byte array.
+		byte[] SaveFileByteArray = File.ReadAllBytes(SaveFilePath);
+		System.Text.ASCIIEncoding ascii = new System.Text.ASCIIEncoding();
+		Console.WriteLine(ascii.GetString(SaveFileByteArray, 0, 4));
 	}
 }
