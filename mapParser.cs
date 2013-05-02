@@ -8,6 +8,17 @@ using System;
 // For file I/O.
 using System.IO;
 
+// Base class for reading SAV files.
+class GenericSection {
+	private string Name;
+	private int Length;
+	// Constructor.
+	public GenericSection(BinaryReader SaveStream) {
+		Console.WriteLine("GenericSection constrcutor");
+		//this.Name = (SaveStream.ReadChars(4));
+		Console.WriteLine(SaveStream.ReadChars(4));
+	}
+}
 
 class KickItOff {
 	static void Main() {
@@ -28,6 +39,10 @@ class KickItOff {
 		using (BinaryReader SaveStream = new BinaryReader(File.Open(SaveFilePath,FileMode.Open))) {
 			Console.WriteLine("Inside the using file statement");
 			Console.WriteLine(SaveStream.ReadChars(4));
+			
+			// FIX: hard-seeking to first TILE section of my test file.
+			SaveStream.BaseStream.Seek(0x34a4, SeekOrigin.Begin);
+			GenericSection TempVar = new GenericSection(SaveStream);
 		}
 	}
 }
