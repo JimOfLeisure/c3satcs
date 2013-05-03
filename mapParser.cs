@@ -27,23 +27,33 @@ class MyBinaryReader: System.IO.BinaryReader {
 
 // Base class for reading SAV files.
 class GenericSection {
-	protected string Name;
+	protected internal string Name;
+	protected byte[] buffer;
 	// Constructor.
 	public GenericSection(MyBinaryReader saveStream) {
 		Console.WriteLine("GenericSection constrcutor");
 		this.Name = saveStream.ReadCharString(4);
 		Console.WriteLine(this.Name);
 	}
+
+	// Constructor with specified data length.
+	public GenericSection(MyBinaryReader saveStream, int length) {
+		Console.WriteLine("GenericSection constrcutor");
+		this.Name = saveStream.ReadCharString(4);
+		Console.WriteLine(this.Name);
+		buffer = saveStream.ReadBytes(length);
+	}
+
 }
 
 class SectionWithLength: GenericSection {
 	protected int Length;
-	protected byte[] buffer;
+	// protected byte[] buffer;
 	// Constructor.
 	public SectionWithLength(MyBinaryReader saveStream) :base(saveStream) {
 		Console.WriteLine("SectionWithLength constrcutor");
 		this.Length = saveStream.ReadInt32();
-		Console.WriteLine(this.Name);
+		//Console.WriteLine(this.Name);
 		Console.WriteLine(this.Length);
 		buffer = saveStream.ReadBytes(this.Length);
 		
@@ -51,20 +61,86 @@ class SectionWithLength: GenericSection {
 	}
 }
 
+class SectionWithLengthNoName {
+	protected int Length;
+	protected byte[] buffer;
+	// Constructor.
+	public SectionWithLengthNoName(MyBinaryReader saveStream) {
+		Console.WriteLine("SectionWithLengthNoName constrcutor");
+		this.Length = saveStream.ReadInt32();
+		Console.WriteLine(this.Length);
+		buffer = saveStream.ReadBytes(this.Length);
+	}
+}
+
+class SectionWithSubrecords: GenericSection {
+	protected int numSubRecords;
+	protected List<SectionWithLengthNoName> subRecord;
+	public SectionWithSubrecords(MyBinaryReader saveStream) :base(saveStream) {
+		this.subRecord = new List<SectionWithLengthNoName>();
+		this.numSubRecords = saveStream.ReadInt32();
+		for (int i = 0; i < this.numSubRecords; i++) {
+			this.subRecord.Add(new SectionWithLengthNoName(saveStream));
+			//Console.WriteLine(i);
+		}
+	}
+}
+
+class BicqSection: GenericSection {
+	protected SectionWithSubrecords verNum, game;
+	public BicqSection(MyBinaryReader saveStream) :base (saveStream) {
+		this.verNum = new SectionWithSubrecords(saveStream);
+		this.game = new SectionWithSubrecords(saveStream);
+	}
+}
+
 // The object to read the save game stream and extract info.
 class civ3Game {
-	protected GenericSection civ3Section;
-	protected List<SectionWithLength> tileSection;
+	protected GenericSection civ3Section, gameSection;
+	protected SectionWithLength bicSection;
+	protected BicqSection bicqSection;
+	protected List<SectionWithLength> tileSection, pileOfSectionsToSortLater;
+	protected List<byte[]> bytePads;
 
 	// Constructor.
 	public civ3Game(MyBinaryReader saveStream) {
-		this.civ3Section = new GenericSection(saveStream);
+		// Initialize my list of sections I don't know what to do with yet.
+		this.pileOfSectionsToSortLater = new List<SectionWithLength>();
 
-		// FIX: hard-seeking to first TILE section of my test file.
-		saveStream.BaseStream.Seek(0x34a4, SeekOrigin.Begin);
+		// Initialize empty byte[] pad list.
+		this.bytePads = new List<byte[]>();
 		
 		// Initialize empty tile list.
 		this.tileSection = new List<SectionWithLength>();
+		
+		// Read save file stream assuming fixed order and general structure.
+		// Trying to use class constructors but reading some padding in manually.
+		// FIX: hard-coding CIV3 length of 0x1a
+		this.civ3Section = new GenericSection(saveStream, 0x1a);
+		this.bicSection = new SectionWithLength(saveStream);
+		this.bicqSection = new BicqSection(saveStream);
+		this.gameSection = new GenericSection(saveStream, 0x0ecf);
+
+		// reading in five sections (DATE, PLGI, PLGI, DATE and DATE)
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+
+		// FIX: hard-coded byte padding here. Is it algined? Other way to realign?
+		this.bytePads.Add(saveStream.ReadBytes(8));
+
+		// reading CNSL section
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+
+		// reading three WRLD sections
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+		
+		// FIX: hard-seeking to first TILE section of my test file.
+		// saveStream.BaseStream.Seek(0x34a4, SeekOrigin.Begin);
 		
 		// FIX: Need to load all tiles. Load a single tile into the list.
 		this.tileSection.Add(new SectionWithLength(saveStream));
@@ -73,6 +149,11 @@ class civ3Game {
 		this.tileSection.Add(new SectionWithLength(saveStream));
 		this.tileSection.Add(new SectionWithLength(saveStream));
 		this.tileSection.Add(new SectionWithLength(saveStream));
+		
+		// Iterating and printing out section names of my junk pile.
+		foreach (SectionWithLength mySection in this.pileOfSectionsToSortLater) {
+			Console.WriteLine(mySection.Name);
+		}
 	}
 }
 

@@ -1,7 +1,9 @@
-This is based on my test save file and decoding results. I am starting with my hierarchy guess file and filling in offsets as I code the program and decode the file.
+This is based on my test save file and decoding results. Compressed save games are compressed with PKWare DCL (Data Compression Library) "implode" and can be decompressed with a compatible "explode" algorithm. There are various Windows and Linux binaries out there. Note this is not the same as PKWare's ZIP format implode/explode and familiar zip/unzip programs cannot decompress the save. The save file appears to be a binary dump of data sectioned with 4-char header names often followed by an int length in bytes or subrecords/subsections. I suspect there is padding in some places, or perhaps they are stray variables tucked between other objects. I am starting with my hierarchy guess file and filling in offsets as I code the program and decode the file.
 
 - CIV3 No length field, appears to be length 26 (0x1a).
 - BIC  int Length = 0x20c
+	- 0x00 int ? = 0x289
+	- The rest is all zeroes
 - BICQ No length field
 	- VER# int subrecords = 1. Each record has no name but starts with int length (= 0x2d0)
 		- Suspect these are game rules copied from the BIQ from which the game was created
@@ -14,8 +16,38 @@ This is based on my test save file and decoding results. I am starting with my h
 - CNSL - Based on some I/O errors referring to this, I now wonder if this
    is a parent container that includes buildings, meaning it would be
    the parent of the map and much else, too
-	- WRLD
-	- WRLD
+	- WRLD int Length = 2 (initially thought 2 subrecords, but there are two bytes between that and next section)
+		- 0x00 short int ? = 0x11
+	- WRLD int length (= 164 / 0xa4)
+		- 0x00 int ?
+		- 0x04 int mapWidth (?) (= 60 / 0x3c)
+		- 0x08 int ?
+		- 0x0c int ?
+		- 0x10 int ?
+		- 0x14 int ?
+		- 0x18 int mapHeight (?) (= 60 / 0x3c)
+		- 0x1c int ? = maxint
+		- 0x20 int ?
+		- 0x24 int ?
+		- 0x28 int ?
+		- 0x2c int ?
+		- 0x30 - 0x9b all 0xff's
+		- 0x9c int ?
+		- 0xa0 int ?
+	- WRLD int length (= 52 / 0x34)
+		- 0x00 int ? = 1
+		- 0x04 int ? = 1
+		- 0x08 int ? = 1
+		- 0x0c int ? = 1
+		- 0x10 int ? = 1
+		- 0x14 int ? = 1
+		- 0x18 int ? = 1
+		- 0x1c int ? = 1
+		- 0x20 int ? = 1
+		- 0x24 int ? = 1
+		- 0x28 int ? = 1
+		- 0x2c int ? = 1
+		- 0x30 int ? = 0
 	- TILE - In C3C there are four different TILE sections for each game tile of lengths 36, 12, 4 and 128 in that order. This is a 60x60 game, and if I understand the isometric layout that's 30x60 because each column is 60 tiles high, but going directly east/west is 2 grid moves, so there exists (from upper-left) a 0,0 and 0,2 and 1,1 and 1,3 but no 0,1 or 0,3 or 1,0 or 1,2. So 30x60 is 1800 tiles resulting in 7200 TILE sections with repeating lengths of 36, 12, 4 and 128 bytes (not including the 4-byte name or 4-byte length integer). Order of game tiles starts at top left (NW) and is in left-right order (W-E) and then top-bottom (N-S). So 0,0 ; 2,0 ; 4,0 ; 6;0 etc..
 		- TILE int Length = 36
 			- 0x0c This byte seems to have nothing to do with terrain. It may be the LSB in a 4-byte integer for purposes unknown
