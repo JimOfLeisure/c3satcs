@@ -28,7 +28,7 @@ class MyBinaryReader: System.IO.BinaryReader {
 // Base class for reading SAV files.
 class GenericSection {
 	protected internal string Name;
-	protected byte[] buffer;
+	protected internal byte[] buffer;
 	// Constructor.
 	public GenericSection(MyBinaryReader saveStream) {
 		Console.WriteLine("GenericSection constrcutor");
@@ -137,11 +137,27 @@ class civ3Game {
 		// reading three WRLD sections
 		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
 		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
+
+		// FIX: Ugly hack to grab presumed map width and height.
+		int mapWidth = BitConverter.ToInt32(pileOfSectionsToSortLater[pileOfSectionsToSortLater.Count - 1].buffer, 0x04);
+		int mapHeight = BitConverter.ToInt32(pileOfSectionsToSortLater[pileOfSectionsToSortLater.Count - 1].buffer, 0x18);
+		Console.WriteLine(mapWidth);
+		Console.WriteLine(mapHeight);
+
 		this.pileOfSectionsToSortLater.Add(new SectionWithLength(saveStream));
 		
 		// FIX: hard-seeking to first TILE section of my test file.
 		// saveStream.BaseStream.Seek(0x34a4, SeekOrigin.Begin);
 		
+		// Read all TILE sections. There are mapWidth/2 * mapHeight * 4 of them
+		// FIX: I really want one entity per game tile, but there are four TILE sections per game tile
+		for (int i = 0; i < (mapWidth / 2) * mapHeight * 4; i++) {
+			this.tileSection.Add(new SectionWithLength(saveStream));
+		}
+		Console.WriteLine(tileSection.Count);
+
+
+/*
 		// FIX: Need to load all tiles. Load a single tile into the list.
 		this.tileSection.Add(new SectionWithLength(saveStream));
 		this.tileSection.Add(new SectionWithLength(saveStream));
@@ -149,7 +165,7 @@ class civ3Game {
 		this.tileSection.Add(new SectionWithLength(saveStream));
 		this.tileSection.Add(new SectionWithLength(saveStream));
 		this.tileSection.Add(new SectionWithLength(saveStream));
-		
+*/
 		// Iterating and printing out section names of my junk pile.
 		foreach (SectionWithLength mySection in this.pileOfSectionsToSortLater) {
 			Console.WriteLine(mySection.Name);
