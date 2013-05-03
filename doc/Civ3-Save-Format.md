@@ -1,0 +1,83 @@
+This is based on my test save file and decoding results. I am starting with my hierarchy guess file and filling in offsets as I code the program and decode the file.
+
+- CIV3 No length field, appears to be length 26 (0x1a).
+- BIC  int Length = 0x20c
+- BICQ No length field
+	- VER# int subrecords = 1. Each record has no name but starts with int length (= 0x2d0)
+		- Suspect these are game rules copied from the BIQ from which the game was created
+	- GAME int subrecords = 1. Each subrecord starts with int length (= 0x1d9d) . I suspect this is the same as the GAME section in the BIQ file and thus a subsection of BIC .
+- GAME - Does not seem to have length or subrecords field. Guessing 2nd appearance of GAME is top-tier parent -- OR -- maybe it is settings
+	- DATE
+	- PLGI
+	- DATE - this instance had a length that fell just short of CNSL
+- suspected data padding here length 8 bytes, or perhaps a simple data member of parent
+- CNSL - Based on some I/O errors referring to this, I now wonder if this
+   is a parent container that includes buildings, meaning it would be
+   the parent of the map and much else, too
+	- WRLD
+	- WRLD
+	- TILE - In C3C there are four different TILE sections for each game tile of lengths 36, 12, 4 and 128 in that order. This is a 60x60 game, and if I understand the isometric layout that's 30x60 because each column is 60 tiles high, but going directly east/west is 2 grid moves, so there exists (from upper-left) a 0,0 and 0,2 and 1,1 and 1,3 but no 0,1 or 0,3 or 1,0 or 1,2. So 30x60 is 1800 tiles resulting in 7200 TILE sections with repeating lengths of 36, 12, 4 and 128 bytes (not including the 4-byte name or 4-byte length integer). Order of game tiles starts at top left (NW) and is in left-right order (W-E) and then top-bottom (N-S). So 0,0 ; 2,0 ; 4,0 ; 6;0 etc..
+		- TILE int Length = 36
+			- 0x0c This byte seems to have nothing to do with terrain. It may be the LSB in a 4-byte integer for purposes unknown
+			- 0x0d 1-byte seems to be somewhat correlated to terrain.
+			- 0x0e-0x13 seem to always be zero
+			- 0x14-0x19 seem to be always 0xff
+			- 0x1a Continent ID. It's possible this is a 2-byte short int. Fresh water tiles are part of thier landmates' continent.
+			- 0x1b seems to be zeroes
+			- 0x1c All 0x06 on my test map. looks somewhat similar to 0x0d
+			- 0x1d varies a lot
+			- The last 6 bytes seem to always be ff ff 00 00 00 00
+		- TILE int Length = 12
+			- 0x00 - 1-byte worker improvements bitmap. The question marks are from other sources and not verified by me so far.
+				- 0000 0001 = Road
+				- 0000 0010 = Rail (?)
+				- 0000 0100 = Mine
+				- 0000 1000 = Irrigation
+				- 0001 0000 = Fortress (?)
+				- 0010 0000 = Goody Hut (?)
+				- 0100 0000 = Pollution (?)
+				- 1000 0000 = Barbarian (?)
+			- 0x01-0x04 - all zeroes in my map
+			- 0x05 - 1-byte Terrain. The lower nybble is base terrain, and the upper nybble is actual terrain. The mismatched nybbles are due to overlays like forests, cities, jungles, etc.. It seems that in this coding mountains and hills are overlays, too.
+			- 0x06-0x09 - all zeroes
+			- 0x0a - some nybble-nybble repetition like 0x05 but not as much; think it's a bitmask possibly including the next byte
+			- 0x0b - mostly 0x00's with a few 0x10's
+
+		- TILE int Length = 4
+			- 0x00
+		- TILE int Length = 128. This may conform to [TILE "Type B" described here](http://forums.civfanatics.com/archive/index.php/t-48270.html)
+			- 0x00 4-byte bitmap, mask 0x02 indicates player-visible tile
+			- 0x04 4-byte bitmap, mask 0x02 indicates player-visible-"now" tile, in my experience applies only to tiles units can see and not city/culture-visible tiles
+
+		- CONT - continents, I presume, several occur
+- suspected padding or simple data here --
+- LEAD - LEAD, CULT and 2x ESPN cycle many times
+	- CULT
+	- ESPN 
+	- ESPN 
+	- UNIT - many UNIT, IDLS cycling
+		- IDLS
+	- CITY - repetition of this term makes me wonder if there could be e.g. a CITY/CITY hierarchy with different scopes having differen meanings
+	- CITY
+	- CITY - City name is under this instance
+		- POPD
+			- CTZN - repeated for each citizen? Each one has description e.g. "Happy Laborer (England)"
+			- CTZN
+			- CTZN
+		- BINF - Bin full?
+		- BITM
+		- DATE - Date city founded?
+	- ? CITY
+	- ? CTPG - seem to be two of these per city name
+	- ? CITY
+	- ? CITY Lots of repeated CITY's without the other sections
+	- CLNY - presumed colony info, only one CLNY in my sample file
+	- PALV - ? repeated
+	- HIST - ? not repeated
+	- TUTR - ? Suggests tutorial info; not repeated
+	- FAXXX - Not sure if this is a FAXX section or random data that looks like a string
+	- RPLS - not repeated, clearly a parent item
+		- RPLT - repeated
+		- RPLE - repeated, occasionally city names associated in runs of RPLE's; sometimes RPLT's resume after city name, sometimes not ; saw one great wonder name among the RPLE's to my surprise
+	- RPLT
+	- ? PEER - not repeated ; multiplayer-related?
